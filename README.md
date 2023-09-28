@@ -1,8 +1,14 @@
 # (TODO: your game's title)
 
-Author: (TODO: your name)
+Author: Nellie Tonev
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: There is no functioning game for this project right now. I spent a long time
+working with Harfbuzz and FreeType libraries, but I got pretty stuck on creating and rendering textures. I'm going to submit anyway, 
+and I really do want to figure out a good approach and understand this, so I'll come to office hours. Hopefully I can eventually return to this and 
+implement something. Thanks!
+
+\
+(TODO: In two sentences or fewer, describe what is new and interesting about your game.)
 
 Text Drawing: (TODO: how does the text drawing in this game work? Is text precomputed? Rendered at runtime? What files or utilities are involved?)
 
