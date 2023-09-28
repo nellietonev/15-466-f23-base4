@@ -1,6 +1,7 @@
 #include "PlayMode.hpp"
 
 #include "LitColorTextureProgram.hpp"
+#include "TextureProgram.hpp"
 
 #include "DrawLines.hpp"
 #include "Mesh.hpp"
@@ -32,7 +33,6 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
-
 	});
 });
 
@@ -112,13 +112,13 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 	} else if (evt.type == SDL_MOUSEMOTION) {
 		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
 			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
+					evt.motion.xrel / float(window_size.y),
+					-evt.motion.yrel / float(window_size.y)
 			);
 			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
+					camera->transform->rotation
+					* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
+					* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
 			);
 			return true;
 		}
@@ -134,16 +134,16 @@ void PlayMode::update(float elapsed) {
 	wobble -= std::floor(wobble);
 
 	hip->rotation = hip_base_rotation * glm::angleAxis(
-		glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 1.0f, 0.0f)
+			glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
+			glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 	upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-		glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
+			glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
+			glm::vec3(0.0f, 0.0f, 1.0f)
 	);
 	lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-		glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
+			glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
+			glm::vec3(0.0f, 0.0f, 1.0f)
 	);
 
 	//move sound to follow leg tip position:
@@ -210,24 +210,139 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		glDisable(GL_DEPTH_TEST);
 		float aspect = float(drawable_size.x) / float(drawable_size.y);
 		DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
+				1.0f / aspect, 0.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f
 		));
 
 		constexpr float H = 0.09f;
 		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+						glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
+						glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+						glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		float ofs = 2.0f / drawable_size.y;
 		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+						glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
+						glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+						glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 	}
 	GL_ERRORS();
+
+	//----------------------------------------------
+	//Test code: draw a textured quad!
+	//based -- in part -- on code from LitColorTextureProgram
+
+	static GLuint tex = 0;
+	if (tex == 0) {
+		glGenTextures(1, &tex);
+
+		glBindTexture(GL_TEXTURE_2D, tex);
+		std::vector< glm::u8vec4 > tex_data{
+				glm::u8vec4(0xff, 0x00, 0x00, 0xff), glm::u8vec4(0x44, 0x44, 0x44, 0x00),
+				glm::u8vec4(0x44, 0x00, 0x00, 0xff), glm::u8vec4(0x00, 0xff, 0x00, 0x88)
+		};
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data.data());
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	static GLuint buffer = 0;
+	if (buffer == 0) {
+		glGenBuffers(1, &buffer);
+		glBindBuffer(GL_ARRAY_BUFFER, buffer);
+		//actually nothing to do right now just wanted to bind it for illustrative purposes
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	struct Vert {
+		Vert(glm::vec3 const &position_, glm::vec2 const &tex_coord_) : position(position_), tex_coord(tex_coord_) { }
+		glm::vec3 position;
+		glm::vec2 tex_coord;
+	};
+	static_assert(sizeof(Vert) == 20, "Vert is packed");
+
+	auto &program = texture_program;
+
+	static GLuint vao = 0;
+	if (vao == 0) {
+		//based on PPU466.cpp
+
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+
+		glBindBuffer(GL_ARRAY_BUFFER, buffer);
+
+		glVertexAttribPointer(
+				program->Position_vec4, //attribute
+				3, //size
+				GL_FLOAT, //type
+				GL_FALSE, //normalized
+				sizeof(Vert), //stride
+				(GLbyte *)0 + offsetof(Vert, position) //offset
+		);
+		glEnableVertexAttribArray(program->Position_vec4);
+
+		glVertexAttribPointer(
+				program->TexCoord_vec2, //attribute
+				2, //size
+				GL_FLOAT, //type
+				GL_FALSE, //normalized
+				sizeof(Vert), //stride
+				(GLbyte *)0 + offsetof(Vert, tex_coord) //offset
+		);
+		glEnableVertexAttribArray(program->TexCoord_vec2);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glBindVertexArray(0);
+	}
+
+
+	//actually draw some textured quads!
+	std::vector< Vert > attribs;
+
+	attribs.emplace_back(glm::vec3(-0.5f, -1.0f, 0.0f), glm::vec2(0.0f, 0.0f));
+	attribs.emplace_back(glm::vec3(-0.5f,  1.0f, 0.0f), glm::vec2(0.0f, 2.0f));
+	attribs.emplace_back(glm::vec3( 1.0f, -1.0f, 0.0f), glm::vec2(1.0f, 0.0f));
+	attribs.emplace_back(glm::vec3( 1.0f,  1.0f, 0.0f), glm::vec2(1.0f, 2.0f));
+
+	glBindBuffer(GL_ARRAY_BUFFER, buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Vert) * attribs.size(), attribs.data(), GL_STREAM_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+
+	//as per Scene::draw -
+	glUseProgram(program->program);
+	glUniformMatrix4fv(program->OBJECT_TO_CLIP_mat4, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+
+	glBindTexture(GL_TEXTURE_2D, tex);
+
+
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glBindVertexArray(vao);
+
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, attribs.size());
+
+	glBindVertexArray(0);
+
+
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glUseProgram(0);
+
+	GL_ERRORS();
+
 }
 
 glm::vec3 PlayMode::get_leg_tip_position() {
